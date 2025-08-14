@@ -20,6 +20,7 @@ import debounce from "lodash.debounce";
 import "react-circular-progressbar/dist/styles.css";
 import "./index.css";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import UsageMonitor from "./UsageMonitor";
 // ✅ Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyB5pgUzqUc0BS8iIhOID_CNh0SrY7jzp1Y",
@@ -35,8 +36,34 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
+const SUBJECTS = ["Math","Language Arts","Science","Social Studies","Gym/Health","Specials"];
+const  EMOJI_OPTIONS = [
+  { key: "great", label: "😀 Great" },
+  { key: "okay",  label: "🙂 Okay" },
+  { key: "struggle", label: "😕 Struggling" },
+];
+const NEEDS_OPTIONS = [
+  { key: "homework",  label: "Homework" },
+  { key: "tests",     label: "Tests/Quizzes" },
+  { key: "classwork", label: "Classroom Assignments" },
+  { key: "tutoring",  label: "I need tutoring" },
+];
+
+const makeEmptyWeeklyRecord = () =>
+  SUBJECTS.reduce((acc, s) => {
+    acc[s] = { grade: "", mood: "", needs: { homework:false, tests:false, classwork:false, tutoring:false }, note: "" };
+    return acc;
+  }, {});
 
 function App() {
+  // Week calculation
+  const schoolStartDate = new Date("2025-08-25");
+  const currentDate = new Date();
+  const currentWeekNumber = Math.floor(
+    (currentDate - schoolStartDate) / (7 * 24 * 60 * 60 * 1000)
+  ) + 1;
+  const currentWeekKey = `Week${currentWeekNumber}`;
+  const weekOptions = Array.from({ length: 40 }, (_, i) => `Week${i + 1}`);
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(localStorage.getItem("role") || "");
   const [teacherUid, setTeacherUid] = useState("");
@@ -47,7 +74,18 @@ function App() {
   const [njslaMathScore, setNjslaMathScore] = useState("");
   const [benchmarkA, setBenchmarkA] = useState("");
   const [benchmarkB, setBenchmarkB] = useState("");
-  const [benchmarkC, setBenchmarkC] = useState("");
+  const [benchmarkC, setBenchmarkC] = 
+useState("");
+  const [unit1, setUnit1]=
+useState("");
+  const [unit2, setUnit2]=
+useState("");
+  const [unit3, setUnit3]=
+useState("");
+  const [unit4, setUnit4]=
+useState("");
+  const [weeklyGrades, setWeeklyGrades] = useState({});
+  const [selectedGradeWeek, setSelectedGradeWeek] = useState(currentWeekKey);
   const [readingTracker, setReadingTracker] = useState({
     Monday: false,
     Tuesday: false,
@@ -85,33 +123,50 @@ function App() {
       currentStreak = 0;
     }
   });
-  // Week calculation
-  const schoolStartDate = new Date("2025-08-25");
-  const currentDate = new Date();
-  const currentWeekNumber = Math.floor(
-    (currentDate - schoolStartDate) / (7 * 24 * 60 * 60 * 1000)
-  ) + 1;
-  const currentWeekKey = `Week${currentWeekNumber}`;
-  const weekOptions = Array.from({ length: 40 }, (_, i) => `Week${i + 1}`);
-
+  
   const languageArtsGoals = [
-    "Read More Books: Read at least 15 books this school year...",
-    "Improve Comprehension: Score 80% or higher on my benchmarks...",
-    "Expand Vocabulary: Learn and correctly use 10 new words per month...",
-    "Independent Reading: Read independently for 20 minutes...",
-    "Write and revise 4 multi-paragraph essays during the school year...",
-    "Improve grammar and punctuation..."
+    "Read at least 20 books this year, exploring different genres like fiction, nonfiction, and poetry.",
+    "Score 80% or higher on reading comprehension quizzes and benchmark tests.",
+    "Learn and correctly use 10 new vocabulary words each month in speaking and writing.",
+    "Read on my own for at least 25 minutes every school day to build stamina and focus.",
+    "Write and revise at least 5 multi-paragraph essays this school year, improving with each draft.",
+    "Set a new personal best on each LinkIt benchmark, improving my score by ≥10 percentage points each time."
   ];
 
   const mathGoals = [
-    "Master Math Facts quickly...",
-    "Fraction & Decimal Proficiency...",
-    "Percentages: Solve real-world percent problems...",
-    "Word Problem Mastery...",
-    "Equation Fluency...",
-    "Ratios & Proportions..."
+    "Fact Fluency: Complete 100 mixed-operation facts in 5:00 with ≥95% accuracy.",
+    "Fractions: Score ≥85% on fraction add/subtract/multiply/divide quiz",
+    "Decimals & Percents: Convert between fractions/decimals/percents with ≥90%",
+    "Percentages: Solve real-world percent problems with ≥80% accuracy",
+    "Word Problem Mastery with ≥95% accuracy",
+    "Equation Fluency: Solve 15 one‑step equations (integers/rationals) with ≥90% accuracy",
+    "Benchmark Growth: Increase District Benchmark Score by ≥15 percentage points by the next window",
+    "Math Journal: Maintain a math journal with daily entries and weekly reflections",
+  "Log on to SuccessMaker and complete 10 lesson per week with ≥80% accuracy"
   ];
+  
+  const [scienceGoal, setScienceGoal] = useState("");
+  const[socialStudiesGoal, setSocialStudiesGoal]= useState("");
+  // Marking-period goal progress (mood + note per MP)
+  const defaultGoalProgress = () => ({
+    language:      { MP1:{mood:"", note:""}, MP2:{mood:"", note:""}, MP3:{mood:"", note:""}, MP4:{mood:"", note:""} },
+    math:          { MP1:{mood:"", note:""}, MP2:{mood:"", note:""}, MP3:{mood:"", note:""}, MP4:{mood:"", note:""} },
+    science:       { MP1:{mood:"", note:""}, MP2:{mood:"", note:""}, MP3:{mood:"", note:""}, MP4:{mood:"", note:""} },
+    socialStudies: { MP1:{mood:"", note:""}, MP2:{mood:"", note:""}, MP3:{mood:"", note:""}, MP4:{mood:"", note:""} },
+    personal:      { MP1:{mood:"", note:""}, MP2:{mood:"", note:""}, MP3:{mood:"", note:""}, MP4:{mood:"", note:""} },
+  });
+  const [goalProgress, setGoalProgress] = useState(defaultGoalProgress());
+  // Marking periods shown in the progress table
+  const MARKING_PERIODS = ["MP1", "MP2", "MP3", "MP4"];
 
+  // Rows for the “What’s my progress on my goal?” table
+  const GOAL_ROWS = [
+    { label: "📘 Language Arts", key: "language",      text: () => languageGoal },
+    { label: "🧮 Math",          key: "math",          text: () => mathGoal },
+    { label: "🔬 Science",       key: "science",       text: () => scienceGoal },
+    { label: "🌍 Social Studies",key: "socialStudies", text: () => socialStudiesGoal },
+    { label: "🌟 Personal",      key: "personal",      text: () => personalGoal },
+  ];
   const colors = {
     primary: "#800020",
     accent: "#FFD700",
@@ -177,11 +232,19 @@ function App() {
         languageGoal,
         mathGoal,
         personalGoal,
+        scienceGoal,
+        socialStudiesGoal,
+        goalProgress,
         njslaLangScore,
         njslaMathScore,
         benchmarkA,
         benchmarkB,
         benchmarkC,
+        unit1,
+        unit2,
+        unit3,
+        unit4,
+        weeklyGrades,
         currentBook,
         readingTracker,
         readingLogs: {
@@ -261,15 +324,23 @@ function App() {
       const unsubscribe = onSnapshot(studentDocRef, async (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
+          setWeeklyGrades(data.weeklyGrades || {});
           setLanguageGoal(data.languageGoal || "");
           setMathGoal(data.mathGoal || "");
+          setScienceGoal(data.scienceGoal || "");
+          setSocialStudiesGoal(data.socialStudiesGoal || "");      
           setPersonalGoal(data.personalGoal || "");
           setNjslaLangScore(data.njslaLangScore || "");
           setNjslaMathScore(data.njslaMathScore || "");
           setBenchmarkA(data.benchmarkA || "");
           setBenchmarkB(data.benchmarkB || "");
           setBenchmarkC(data.benchmarkC || "");
+          setUnit1(data.unit1 || "");
+          setUnit2(data.unit2 || "");
+          setUnit3(data.unit3 || "");
+          setUnit4(data.unit4 || "");
           setCurrentBook(data.currentBook || "");
+          setGoalProgress(data.goalProgress || defaultGoalProgress());
           if (JSON.stringify(data.readingTracker) !== JSON.stringify(readingTracker)) {
             setReadingTracker(data.readingTracker || {
               Monday: false, Tuesday: false, Wednesday: false, Thursday: false, Friday: false
@@ -311,8 +382,9 @@ function App() {
       debouncedSave();
     }
   }, [
-    languageGoal, mathGoal, personalGoal, njslaLangScore, njslaMathScore,
-    benchmarkA, benchmarkB, benchmarkC, currentBook, readingTracker
+    languageGoal, mathGoal, scienceGoal, socialStudiesGoal, personalGoal, njslaLangScore, njslaMathScore, 
+    benchmarkA, benchmarkB, benchmarkC,  currentBook, readingTracker,
+    unit1, unit2, unit3, unit4, weeklyGrades,JSON.stringify(goalProgress)
   ]);
 
   useEffect(() => {
@@ -401,7 +473,10 @@ function App() {
       {/* Student Dashboard */}
       {role === "student" && (
         <div style={cardStyle}>
-          <h2>Student Dashboard</h2>
+          <button style={buttonStyle} onClick={saveStudentProgress}>
+            💾 Save Now
+          </button>
+          <h2>Student Goals</h2>
           <label>Math Goal</label>
           <select style={inputStyle} value={mathGoal} onChange={(e) => setMathGoal(e.target.value)}>
             <option value="">-- Select a Math Goal --</option>
@@ -409,7 +484,6 @@ function App() {
               <option key={index} value={goal}>{goal}</option>
             ))}
           </select>
-
           <label>Language Arts Goal</label>
           <select style={inputStyle} value={languageGoal} onChange={(e) => setLanguageGoal(e.target.value)}>
             <option value="">-- Select a Language Arts Goal --</option>
@@ -417,18 +491,379 @@ function App() {
               <option key={index} value={goal}>{goal}</option>
             ))}
           </select>
-
+          <label>Science Goal</label>
+          <input
+            style={inputStyle}
+            type="text"
+            placeholder="Write your Science goal (example: 'Score ≥85% on Unit 1 test' or 'Complete every lab report on time')"
+            value={scienceGoal}
+            onChange={(e) => setScienceGoal(e.target.value)}
+          />
+          <label>Social Studies Goal</label>             <input  
+            style={inputStyle} 
+            type="text" 
+            placeholder="Write your Social Studies goal (example: 'Score ≥85% on Unit 1 test' or 'Complete every report on time')"   
+            value={socialStudiesGoal}
+            onChange={(e) => setSocialStudiesGoal(e.target.value)} 
+          />        
           <label>Personal Development Goal</label>
           <input style={inputStyle} type="text" value={personalGoal} onChange={(e) => setPersonalGoal(e.target.value)} />
+          <div style={cardStyle}>
+            <h3>📈 My Goal Progress Tracker</h3>
+
+            {/* DESKTOP/TABLET: classic table */}
+            <table className="goal-progress__table goal-progress">
+              <thead>
+                <tr>
+                  <th style={thStyle}>Goal</th>
+                  <th style={thStyle}>MP1</th>
+                  <th style={thStyle}>MP2</th>
+                  <th style={thStyle}>MP3</th>
+                  <th style={thStyle}>MP4</th>
+                  <th style={thStyle}>Notes (for this year)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {GOAL_ROWS.map(({ label, key: gKey, text }) => (
+                  <tr key={gKey}>
+                    <td className="goal-progress__goalcell" style={{ ...tdStyle, textAlign: "left" }}>
+                      <div style={{ fontWeight: "bold" }}>{label}</div>
+                      <small>{text() || "— no goal set —"}</small>
+                    </td>
+
+                    {MARKING_PERIODS.map((mp) => (
+                      <td key={mp} style={tdStyle}>
+                        <select
+                          style={{ ...inputStyle, margin: 0, width: "100%" }}
+                          value={goalProgress[gKey]?.[mp]?.mood || ""}
+                          onChange={(e) => {
+                            const mood = e.target.value;
+                            setGoalProgress((prev) => ({
+                              ...prev,
+                              [gKey]: {
+                                ...prev[gKey],
+                                [mp]: { ...(prev[gKey]?.[mp] || { note: "" }), mood }
+                              }
+                            }));
+                          }}
+                        >
+                          <option value="">— Select —</option>
+                          {EMOJI_OPTIONS.map((opt) => (
+                            <option key={opt.key} value={opt.key}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </td>
+                    ))}
+
+                    <td style={{ ...tdStyle, minWidth: 220 }}>
+                      <textarea
+                        style={{ ...inputStyle, height: 70, margin: 0 }}
+                        placeholder="Add a short note/reflection"
+                        value={goalProgress[gKey]?.MP4?.note || ""}
+                        onChange={(e) => {
+                          const note = e.target.value;
+                          setGoalProgress((prev) => ({
+                            ...prev,
+                            [gKey]: {
+                              ...prev[gKey],
+                              MP4: { ...(prev[gKey]?.MP4 || { mood: "" }), note }
+                            }
+                          }));
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* PHONE: stacked cards */}
+            <div className="goal-progress__cards goal-progress">
+              {GOAL_ROWS.map(({ label, key: gKey, text }) => (
+                <div key={gKey} className="goal-card">
+                  <div className="goal-card__header">
+                    <span className="goal-card__label">{label}</span>
+                    <span className="goal-card__text">{text() || "— no goal set —"}</span>
+                  </div>
+
+                  {MARKING_PERIODS.map((mp) => (
+                    <div key={mp} className="goal-card__row">
+                      <label>{mp}</label>
+                      <select
+                        value={goalProgress[gKey]?.[mp]?.mood || ""}
+                        onChange={(e) => {
+                          const mood = e.target.value;
+                          setGoalProgress((prev) => ({
+                            ...prev,
+                            [gKey]: {
+                              ...prev[gKey],
+                              [mp]: { ...(prev[gKey]?.[mp] || { note: "" }), mood }
+                            }
+                          }));
+                        }}
+                      >
+                        <option value="">— Select —</option>
+                        {EMOJI_OPTIONS.map((opt) => (
+                          <option key={opt.key} value={opt.key}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+
+                  <div className="goal-card__row" style={{ marginTop: 6 }}>
+                    <label>Notes (for this year)</label>
+                    <textarea
+                      placeholder="Add a short note/reflection"
+                      value={goalProgress[gKey]?.MP4?.note || ""}
+                      onChange={(e) => {
+                        const note = e.target.value;
+                        setGoalProgress((prev) => ({
+                          ...prev,
+                          [gKey]: {
+                            ...prev[gKey],
+                            MP4: { ...(prev[gKey]?.MP4 || { mood: "" }), note }
+                          }
+                        }));
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <h3>NJSLA Scores</h3>
           <input style={inputStyle} type="number" placeholder="Language Arts Score" value={njslaLangScore} onChange={(e) => setNjslaLangScore(e.target.value)} />
           <input style={inputStyle} type="number" placeholder="Math Score" value={njslaMathScore} onChange={(e) => setNjslaMathScore(e.target.value)} />
 
-          <h3>District Benchmarks</h3>
-          <input style={inputStyle} type="number" placeholder="Form A Score" value={benchmarkA} onChange={(e) => setBenchmarkA(e.target.value)} />
-          <input style={inputStyle} type="number" placeholder="Form B Score" value={benchmarkB} onChange={(e) => setBenchmarkB(e.target.value)} />
-          <input style={inputStyle} type="number" placeholder="Form C Score" value={benchmarkC} onChange={(e) => setBenchmarkC(e.target.value)} />
+          <h3>LinkIt District Benchmark Scores
+          </h3>
+          <input style={inputStyle} type="number" placeholder="LinkIt Form A Score" value={benchmarkA} onChange={(e) => setBenchmarkA(e.target.value)} />
+          <input style={inputStyle} type="number" placeholder="LinkIt Form B Score" value={benchmarkB} onChange={(e) => setBenchmarkB(e.target.value)} />
+          <input style={inputStyle} type="number" placeholder="LinkIt Form C Score" value={benchmarkC} onChange={(e) => setBenchmarkC(e.target.value)} />
+
+          <h3>Unit Scores</h3>
+          <input style={inputStyle} type="number" placeholder="Unit 1 Score" value={unit1} onChange={(e) => setUnit1(e.target.value)} />
+          <input style={inputStyle} type="number" placeholder="Unit 2 Score" value={unit2} onChange={(e) => setUnit2(e.target.value)} />
+          <input style={inputStyle} type="number" placeholder="Unit 3 Score" value={unit3} onChange={(e) => setUnit3(e.target.value)} />
+          <input style={inputStyle} type="number" placeholder="Unit 4 Score" value={unit4} onChange={(e) => setUnit4(e.target.value)} />
+          {/* ✅ Weekly Grades Check-In */}
+          <div style={cardStyle}>
+            <h3> 🚀 My Weekly Grade Check 🚀 </h3>
+
+            {/* Week selector (unchanged) */}
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
+              <span>Week:</span>
+              <select
+                style={{ ...inputStyle, width: 160, marginBottom: 0 }}
+                value={selectedGradeWeek}
+                onChange={(e) => {
+                  const wk = e.target.value;
+                  setSelectedGradeWeek(wk);
+                  setWeeklyGrades((prev) => ({
+                    ...prev,
+                    [wk]: prev[wk] || makeEmptyWeeklyRecord()
+                  }));
+                }}
+              >
+                {[currentWeekKey, ...weekOptions.filter((w) => w !== currentWeekKey)].map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* DESKTOP/TABLET: table view */}
+            <table className="weekly-check__table weekly-check">
+              <thead>
+                <tr>
+                  <th style={thStyle}>Subject</th>
+                  <th style={thStyle}>Grade</th>
+                  <th style={thStyle}>How am I doing?</th>
+                  <th style={thStyle}>Areas to Work On…</th>
+                </tr>
+              </thead>
+              <tbody>
+                {SUBJECTS.map((subj) => {
+                  const wk = weeklyGrades[selectedGradeWeek] || makeEmptyWeeklyRecord();
+                  const row = wk[subj] || { grade: "", mood: "", needs: {}, note: "" };
+
+                  return (
+                    <tr key={subj}>
+                      <td style={{ ...tdStyle }}>{subj}</td>
+
+                      {/* Grade */}
+                      <td style={tdStyle}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="—"
+                          value={row.grade}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? "" : Math.max(0, Math.min(100, Number(e.target.value)));
+                            setWeeklyGrades((prev) => {
+                              const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                              next[subj] = { ...(next[subj] || {}), grade: val };
+                              return { ...prev, [selectedGradeWeek]: next };
+                            });
+                          }}
+                          style={{ ...inputStyle, margin: 0, width: 90 }}
+                        />
+                      </td>
+
+                      {/* Mood */}
+                      <td style={tdStyle}>
+                        <select
+                          value={row.mood || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setWeeklyGrades((prev) => {
+                              const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                              next[subj] = { ...(next[subj] || {}), mood: val };
+                              return { ...prev, [selectedGradeWeek]: next };
+                            });
+                          }}
+                          style={{ ...inputStyle, margin: 0, width: 180 }}
+                        >
+                          <option value="">— Select —</option>
+                          {EMOJI_OPTIONS.map((opt) => (
+                            <option key={opt.key} value={opt.key}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Needs */}
+                      <td style={{ ...tdStyle, textAlign: "left" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {NEEDS_OPTIONS.map((opt) => (
+                            <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <input
+                                type="checkbox"
+                                checked={!!row.needs?.[opt.key]}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setWeeklyGrades((prev) => {
+                                    const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                                    const cur = next[subj] || { grade: "", mood: "", needs: {}, note: "" };
+                                    next[subj] = {
+                                      ...cur,
+                                      needs: { ...(cur.needs || {}), [opt.key]: checked }
+                                    };
+                                    return { ...prev, [selectedGradeWeek]: next };
+                                  });
+                                }}
+                              />
+                              <span>{opt.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* PHONE: card view */}
+            <div className="weekly-check__cards weekly-check">
+              {SUBJECTS.map((subj) => {
+                const wk = weeklyGrades[selectedGradeWeek] || makeEmptyWeeklyRecord();
+                const row = wk[subj] || { grade: "", mood: "", needs: {}, note: "" };
+
+                return (
+                  <div key={subj} className="weekly-card">
+                    <div className="weekly-card__title">{subj}</div>
+
+                    {/* Grade */}
+                    <div className="weekly-card__row">
+                      <label>Grade</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        placeholder="—"
+                        value={row.grade}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? "" : Math.max(0, Math.min(100, Number(e.target.value)));
+                          setWeeklyGrades((prev) => {
+                            const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                            next[subj] = { ...(next[subj] || {}), grade: val };
+                            return { ...prev, [selectedGradeWeek]: next };
+                          });
+                        }}
+                      />
+                    </div>
+
+                    {/* Mood */}
+                    <div className="weekly-card__row">
+                      <label>How am I doing?</label>
+                      <select
+                        value={row.mood || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setWeeklyGrades((prev) => {
+                            const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                            next[subj] = { ...(next[subj] || {}), mood: val };
+                            return { ...prev, [selectedGradeWeek]: next };
+                          });
+                        }}
+                      >
+                        <option value="">— Select —</option>
+                        {EMOJI_OPTIONS.map((opt) => (
+                          <option key={opt.key} value={opt.key}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Needs */}
+                    <div className="weekly-card__row">
+                      <label>Areas to Work On…</label>
+                      <div className="weekly-card__needs">
+                        {NEEDS_OPTIONS.map((opt) => (
+                          <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input
+                              type="checkbox"
+                              checked={!!row.needs?.[opt.key]}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setWeeklyGrades((prev) => {
+                                  const next = { ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()) };
+                                  const cur = next[subj] || { grade: "", mood: "", needs: {}, note: "" };
+                                  next[subj] = { ...cur, needs: { ...(cur.needs || {}), [opt.key]: checked } };
+                                  return { ...prev, [selectedGradeWeek]: next };
+                                });
+                              }}
+                            />
+                            <span>{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Weekly note (kept as-is) */}
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontWeight: "bold" }}>📌 Weekly Note (optional)</label>
+              <textarea
+                style={{ ...inputStyle, height: 80 }}
+                placeholder="What will I do next week to improve?"
+                value={(weeklyGrades[selectedGradeWeek]?.note) || ""}
+                onChange={(e) => {
+                  const text = e.target.value;
+                  setWeeklyGrades((prev) => ({
+                    ...prev,
+                    [selectedGradeWeek]: {
+                      ...(prev[selectedGradeWeek] || makeEmptyWeeklyRecord()),
+                      note: text,
+                    },
+                  }));
+                }}
+              />
+            </div>
+          </div>
 
           <h3>Reading Tracker</h3>
           <div style={{ width: "120px", margin: "0 auto 20px auto" }}>
@@ -488,6 +923,12 @@ function App() {
       {role === "teacher" && (
         <div style={cardStyle}>
           <h2>Teacher Dashboard</h2>
+          <UsageMonitor
+            students={scores.length || 997}
+            savesPerStudentPerDay={3}
+            teachers={1}
+            colors={colors}
+          />
 
           {/* Reading Logs with Week Selector */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
@@ -546,9 +987,9 @@ function App() {
                 <th style={thStyle}>Name</th>
                 <th style={thStyle}>NJSLA Math</th>
                 <th style={thStyle}>NJSLA Lang</th>
-                <th style={thStyle}>Benchmark A</th>
-                <th style={thStyle}>Benchmark B</th>
-                <th style={thStyle}>Benchmark C</th>
+                <th style={thStyle}>LinkIt Form A</th>
+                <th style={thStyle}>LinkIt Form B</th>
+                <th style={thStyle}>LinkIt Form C</th>
               </tr>
             </thead>
             <tbody>
@@ -566,6 +1007,36 @@ function App() {
               ) : (
                 <tr>
                   <td style={tdStyle} colSpan="6">No exam scores available.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {/* 🧪 Unit Tests */}
+          <h3>🧪 Unit Tests</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "30px" }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Name</th>
+                <th style={thStyle}>Unit 1</th>
+                <th style={thStyle}>Unit 2</th>
+                <th style={thStyle}>Unit 3</th>
+                <th style={thStyle}>Unit 4</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scores.length > 0 ? (
+                scores.map((entry) => (
+                  <tr key={entry.id}>
+                    <td style={tdStyle}>{entry.name}</td>
+                    <td style={tdStyle}>{entry.unit1}</td>
+                    <td style={tdStyle}>{entry.unit2}</td>
+                    <td style={tdStyle}>{entry.unit3}</td>
+                    <td style={tdStyle}>{entry.unit4}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td style={tdStyle} colSpan="5">No unit test scores yet.</td>
                 </tr>
               )}
             </tbody>
@@ -694,6 +1165,12 @@ function App() {
             <p>{selectedStudent.mathGoal || "No goal set"}</p>
           </div>
           <div style={{ marginBottom: "15px" }}>
+            <strong>🔬 Science Goal:</strong>               <p>{selectedStudent.scienceGoal || "No goal set"}</p>  
+          </div>
+          <div style={{ marginBottom: "15px" }}> 
+            <strong>🌍 Social Studies Goal:</strong>               <p>{selectedStudent.socialStudiesGoal || "No goal set"}</p>
+            </div>
+          <div style={{ marginBottom: "15px" }}>
             <strong>🌟 Personal Goal:</strong>
             <p>{selectedStudent.personalGoal || "No goal set"}</p>
           </div>
@@ -711,6 +1188,7 @@ function App() {
             onClick={() => setSelectedStudent(null)}
           >
             Close
+          
           </button>
         </div>
       )}

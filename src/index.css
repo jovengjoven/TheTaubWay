@@ -9,3 +9,149 @@
     transform: translateX(0);
   }
 }
+/* ---- Goal Progress: responsive layouts ---- */
+.goal-progress { margin-top: 10px; }
+
+/* Hide card view on large screens; show table */
+.goal-progress__table { display: table; width: 100%; border-collapse: collapse; }
+.goal-progress__cards { display: none; }
+
+@media (max-width: 768px) {
+  /* On phones: show cards, hide table */
+  .goal-progress__table { display: none; }
+  .goal-progress__cards { display: grid; gap: 12px; }
+
+  .goal-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+
+  .goal-card__header {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .goal-card__label { font-weight: 700; }
+  .goal-card__text { font-size: 12px; color: #666; }
+
+  .goal-card__row { display: grid; grid-template-columns: 100%; gap: 6px; }
+  .goal-card__row > label { font-size: 12px; color: #555; }
+
+  .goal-card select, .goal-card textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  .goal-card textarea { min-height: 70px; }
+}
+
+/* Optional: a little nicer table on desktop */
+.goal-progress__table th,
+.goal-progress__table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+.goal-progress__table th { font-weight: 700; }
+.goal-progress__goalcell { text-align: left; }
+.goal-progress__goalcell small { display: block; color: #666; }
+/* ---- Weekly Grade Check: responsive layouts ---- */
+.weekly-check { margin-top: 10px; }
+
+/* Desktop/tablet shows table */
+.weekly-check__table { display: table; width: 100%; border-collapse: collapse; }
+.weekly-check__cards { display: none; }
+
+/* Optional: nicer table borders */
+.weekly-check__table th,
+.weekly-check__table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+/* Phone layout: stacked cards */
+@media (max-width: 768px) {
+  .weekly-check__table { display: none; }
+  .weekly-check__cards { display: grid; gap: 12px; }
+
+  .weekly-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .weekly-card__title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .weekly-card__row {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .weekly-card__needs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+  }
+  .weekly-card select,
+  .weekly-card input[type="number"],
+  .weekly-card textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+}
+/* ---- Theme styling for mobile cards ---- */
+@media (max-width: 768px) {
+  /* Cards for Goals and Weekly Check */
+  .goal-card, .weekly-card {
+    border: 2px solid #800020; /* Burgundy border */
+    background-color: #fff8f5; /* Soft background tint */
+  }
+
+  /* Headers / labels inside cards */
+  .goal-card__label, .weekly-card__title {
+    color: #800020;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  /* Section labels (MP1, Grade, Mood, etc.) */
+  .goal-card__row > label,
+  .weekly-card__row > label {
+    color: #555;
+    font-weight: 600;
+  }
+
+  /* Inputs and selects */
+  .goal-card select, .weekly-card select,
+  .goal-card input,  .weekly-card input,
+  .goal-card textarea, .weekly-card textarea {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .goal-card select:focus, .weekly-card select:focus,
+  .goal-card input:focus,  .weekly-card input:focus,
+  .goal-card textarea:focus, .weekly-card textarea:focus {
+    border-color: #FFD700; /* Gold accent on focus */
+    outline: none;
+    box-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+  }
+
+  /* Needs checkboxes spacing */
+  .weekly-card__needs label {
+    background-color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+}
