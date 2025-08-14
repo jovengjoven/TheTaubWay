@@ -123,28 +123,6 @@ useState("");
       currentStreak = 0;
     }
   });
-  
-  const languageArtsGoals = [
-    "Read at least 20 books this year, exploring different genres like fiction, nonfiction, and poetry.",
-    "Score 80% or higher on reading comprehension quizzes and benchmark tests.",
-    "Learn and correctly use 10 new vocabulary words each month in speaking and writing.",
-    "Read on my own for at least 25 minutes every school day to build stamina and focus.",
-    "Write and revise at least 5 multi-paragraph essays this school year, improving with each draft.",
-    "Set a new personal best on each LinkIt benchmark, improving my score by ≥10 percentage points each time."
-  ];
-
-  const mathGoals = [
-    "Fact Fluency: Complete 100 mixed-operation facts in 5:00 with ≥95% accuracy.",
-    "Fractions: Score ≥85% on fraction add/subtract/multiply/divide quiz",
-    "Decimals & Percents: Convert between fractions/decimals/percents with ≥90%",
-    "Percentages: Solve real-world percent problems with ≥80% accuracy",
-    "Word Problem Mastery with ≥95% accuracy",
-    "Equation Fluency: Solve 15 one‑step equations (integers/rationals) with ≥90% accuracy",
-    "Benchmark Growth: Increase District Benchmark Score by ≥15 percentage points by the next window",
-    "Math Journal: Maintain a math journal with daily entries and weekly reflections",
-  "Log on to SuccessMaker and complete 10 lesson per week with ≥80% accuracy"
-  ];
-  
   const [scienceGoal, setScienceGoal] = useState("");
   const[socialStudiesGoal, setSocialStudiesGoal]= useState("");
   // Marking-period goal progress (mood + note per MP)
@@ -477,32 +455,36 @@ useState("");
             💾 Save Now
           </button>
           <h2>Student Goals</h2>
+
           <label>Math Goal</label>
-          <select style={inputStyle} value={mathGoal} onChange={(e) => setMathGoal(e.target.value)}>
-            <option value="">-- Select a Math Goal --</option>
-            {mathGoals.map((goal, index) => (
-              <option key={index} value={goal}>{goal}</option>
-            ))}
-          </select>
+          <input
+            style={inputStyle}
+            type="text"
+            placeholder="Write your Math goal (Example: 'Score ≥80% on the next unit test' or 'Increase LinkIt Math score.)"
+            value={mathGoal}
+            onChange={(e) => setMathGoal(e.target.value)}
+          />
+
           <label>Language Arts Goal</label>
-          <select style={inputStyle} value={languageGoal} onChange={(e) => setLanguageGoal(e.target.value)}>
-            <option value="">-- Select a Language Arts Goal --</option>
-            {languageArtsGoals.map((goal, index) => (
-              <option key={index} value={goal}>{goal}</option>
-            ))}
-          </select>
+          <input
+            style={inputStyle}
+            type="text"
+            placeholder="Write your Language Arts goal (Example: Read 25 minutes daily' or Score ≥80% on the next benchmark)"
+            value={languageGoal}
+            onChange={(e) => setLanguageGoal(e.target.value)}
+          />
           <label>Science Goal</label>
           <input
             style={inputStyle}
             type="text"
-            placeholder="Write your Science goal (example: 'Score ≥85% on Unit 1 test' or 'Complete every lab report on time')"
+            placeholder="Write your Science goal (Example: 'Score ≥85% on Unit 1 test' or 'Complete every lab report on time')"
             value={scienceGoal}
             onChange={(e) => setScienceGoal(e.target.value)}
           />
           <label>Social Studies Goal</label>             <input  
             style={inputStyle} 
             type="text" 
-            placeholder="Write your Social Studies goal (example: 'Score ≥85% on Unit 1 test' or 'Complete every report on time')"   
+            placeholder="Write your Social Studies goal (Example: 'Score ≥85% on Unit 1 test' or 'Complete every report on time')"   
             value={socialStudiesGoal}
             onChange={(e) => setSocialStudiesGoal(e.target.value)} 
           />        
